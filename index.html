@@ -200,7 +200,8 @@
     const SUPABASE_URL = 'https://ffixdrejpbemewesrkuo.supabase.co';
     const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZmaXhkcmVqcGJlbWV3ZXNya3VvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjY2NTg2MTcsImV4cCI6MjA4MjIzNDYxN30.IR9lU69FP1ePkkQUdOaEvM2DjrgXabOt6_bmftfsTb4';
 
-    const supabase = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+    // تغییر نام متغیر برای جلوگیری از تداخل با کتابخانه اصلی
+    const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
     const taskInput = document.getElementById('taskInput');
     const addBtn = document.getElementById('addBtn');
@@ -216,7 +217,7 @@
         todoList.innerHTML = '';
         emptyState.style.display = 'none';
 
-        const { data, error } = await supabase
+        const { data, error } = await supabaseClient
             .from('todos')
             .select('*')
             .order('created_at', { ascending: false });
@@ -272,7 +273,7 @@
         addBtn.disabled = true;
         addBtn.textContent = '...';
 
-        const { data, error } = await supabase
+        const { data, error } = await supabaseClient
             .from('todos')
             .insert([{ task: text }])
             .select();
@@ -335,7 +336,7 @@
             textSpan.classList.remove('completed');
         }
 
-        const { error } = await supabase
+        const { error } = await supabaseClient
             .from('todos')
             .update({ is_complete: newStatus })
             .eq('id', id);
@@ -361,7 +362,7 @@
         // حذف موقت از UI
         liElement.style.display = 'none';
 
-        const { error } = await supabase
+        const { error } = await supabaseClient
             .from('todos')
             .delete()
             .eq('id', id);
