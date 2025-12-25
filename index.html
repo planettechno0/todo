@@ -1,0 +1,394 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>لیست کارهای من</title>
+    <!-- فونت وزیرمتن -->
+    <link href="https://cdn.jsdelivr.net/gh/rastikerdar/vazirmatn@v33.003/Vazirmatn-font-face.css" rel="stylesheet" type="text/css" />
+
+    <style>
+        :root {
+            --bg-color: #f5f7fa;
+            --container-bg: #ffffff;
+            --primary-color: #3b82f6;
+            --text-color: #1f2937;
+            --text-secondary: #6b7280;
+            --border-color: #e5e7eb;
+            --danger-color: #ef4444;
+            --success-color: #10b981;
+        }
+
+        body {
+            font-family: 'Vazirmatn', sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            justify-content: center;
+            min-height: 100vh;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 500px;
+            background: var(--container-bg);
+            border-radius: 16px;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+            padding: 24px;
+            height: fit-content;
+        }
+
+        h1 {
+            text-align: center;
+            margin-top: 0;
+            margin-bottom: 24px;
+            font-size: 1.5rem;
+            color: var(--primary-color);
+        }
+
+        .input-group {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 24px;
+        }
+
+        input[type="text"] {
+            flex-grow: 1;
+            padding: 12px;
+            border: 2px solid var(--border-color);
+            border-radius: 8px;
+            font-family: inherit;
+            font-size: 1rem;
+            outline: none;
+            transition: border-color 0.2s;
+        }
+
+        input[type="text"]:focus {
+            border-color: var(--primary-color);
+        }
+
+        button.add-btn {
+            background-color: var(--primary-color);
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-family: inherit;
+            font-weight: bold;
+            transition: background-color 0.2s;
+        }
+
+        button.add-btn:hover {
+            background-color: #2563eb;
+        }
+
+        button.add-btn:disabled {
+            background-color: var(--text-secondary);
+            cursor: not-allowed;
+        }
+
+        ul {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+        }
+
+        li {
+            display: flex;
+            align-items: center;
+            padding: 12px;
+            border-bottom: 1px solid var(--border-color);
+            transition: background-color 0.2s;
+        }
+
+        li:last-child {
+            border-bottom: none;
+        }
+
+        li:hover {
+            background-color: #f9fafb;
+        }
+
+        .checkbox {
+            width: 20px;
+            height: 20px;
+            margin-left: 12px;
+            cursor: pointer;
+            border: 2px solid var(--text-secondary);
+            border-radius: 4px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+        }
+
+        .checkbox.checked {
+            background-color: var(--success-color);
+            border-color: var(--success-color);
+        }
+
+        .checkbox.checked::after {
+            content: '✓';
+            color: white;
+            font-size: 14px;
+        }
+
+        .task-text {
+            flex-grow: 1;
+            font-size: 1.1rem;
+            word-break: break-all;
+        }
+
+        .task-text.completed {
+            text-decoration: line-through;
+            color: var(--text-secondary);
+        }
+
+        .delete-btn {
+            background: none;
+            border: none;
+            color: var(--text-secondary);
+            cursor: pointer;
+            padding: 8px;
+            border-radius: 4px;
+            transition: color 0.2s, background-color 0.2s;
+        }
+
+        .delete-btn:hover {
+            color: var(--danger-color);
+            background-color: #fee2e2;
+        }
+
+        .loading {
+            text-align: center;
+            color: var(--text-secondary);
+            padding: 20px;
+        }
+
+        .empty-state {
+            text-align: center;
+            color: var(--text-secondary);
+            margin-top: 20px;
+            display: none;
+        }
+
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1>لیست کارها</h1>
+
+    <div class="input-group">
+        <input type="text" id="taskInput" placeholder="کار جدید را بنویسید..." autocomplete="off">
+        <button class="add-btn" id="addBtn" onclick="addTodo()">افزودن</button>
+    </div>
+
+    <div id="loading" class="loading">در حال بارگذاری...</div>
+    <div id="emptyState" class="empty-state">هنوز کاری ثبت نشده است.</div>
+    <ul id="todoList"></ul>
+</div>
+
+<!-- اتصال به Supabase -->
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+<script>
+    // --- تنظیمات Supabase ---
+    const SUPABASE_URL = 'https://ffixdrejpbemewesrkuo.supabase.co';
+    const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZmaXhkcmVqcGJlbWV3ZXNya3VvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjY2NTg2MTcsImV4cCI6MjA4MjIzNDYxN30.IR9lU69FP1ePkkQUdOaEvM2DjrgXabOt6_bmftfsTb4';
+
+    const supabase = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+    const taskInput = document.getElementById('taskInput');
+    const addBtn = document.getElementById('addBtn');
+    const todoList = document.getElementById('todoList');
+    const loading = document.getElementById('loading');
+    const emptyState = document.getElementById('emptyState');
+
+    // --- توابع اصلی ---
+
+    // 1. دریافت لیست کارها
+    async function fetchTodos() {
+        loading.style.display = 'block';
+        todoList.innerHTML = '';
+        emptyState.style.display = 'none';
+
+        const { data, error } = await supabase
+            .from('todos')
+            .select('*')
+            .order('created_at', { ascending: false });
+
+        loading.style.display = 'none';
+
+        if (error) {
+            console.error('Error fetching todos:', error);
+            alert('خطا در دریافت اطلاعات!');
+            return;
+        }
+
+        if (data.length === 0) {
+            emptyState.style.display = 'block';
+        } else {
+            data.forEach(todo => renderTodo(todo));
+        }
+    }
+
+    // 2. نمایش یک تودو در لیست
+    function renderTodo(todo) {
+        const li = document.createElement('li');
+        li.dataset.id = todo.id;
+
+        // چک باکس سفارشی
+        const checkbox = document.createElement('div');
+        checkbox.className = `checkbox ${todo.is_complete ? 'checked' : ''}`;
+        checkbox.onclick = () => toggleTodo(todo.id, !todo.is_complete, li);
+
+        // متن
+        const span = document.createElement('span');
+        span.className = `task-text ${todo.is_complete ? 'completed' : ''}`;
+        span.textContent = todo.task;
+
+        // دکمه حذف
+        const deleteBtn = document.createElement('button');
+        deleteBtn.className = 'delete-btn';
+        deleteBtn.innerHTML = '🗑️'; // آیکون سطل زباله
+        deleteBtn.title = 'حذف';
+        deleteBtn.onclick = () => deleteTodo(todo.id, li);
+
+        li.appendChild(checkbox);
+        li.appendChild(span);
+        li.appendChild(deleteBtn);
+        todoList.appendChild(li);
+    }
+
+    // 3. افزودن کار جدید
+    async function addTodo() {
+        const text = taskInput.value.trim();
+        if (!text) return;
+
+        addBtn.disabled = true;
+        addBtn.textContent = '...';
+
+        const { data, error } = await supabase
+            .from('todos')
+            .insert([{ task: text }])
+            .select();
+
+        addBtn.disabled = false;
+        addBtn.textContent = 'افزودن';
+
+        if (error) {
+            console.error('Error adding todo:', error);
+            alert('خطا در ثبت!');
+        } else {
+            taskInput.value = '';
+            // اگر لیست خالی بود، پیام خالی را بردار
+            emptyState.style.display = 'none';
+            // آیتم جدید را به اول لیست اضافه کن
+            if (data && data.length > 0) {
+                // چون رندر ما append است و لیست order desc است، بهتر است کل لیست را رفرش کنیم یا prepend کنیم
+                // برای سادگی اینجا رفرش میکنیم یا دستی المنت میسازیم.
+                // بیایید دستی بسازیم که سریعتر باشد:
+                // اما چون دیتای برگشتی آرایه است:
+                const newTodo = data[0];
+
+                // ساخت المنت و اضافه کردن به ابتدای لیست
+                const li = document.createElement('li');
+                li.dataset.id = newTodo.id;
+
+                const checkbox = document.createElement('div');
+                checkbox.className = 'checkbox';
+                checkbox.onclick = () => toggleTodo(newTodo.id, !newTodo.is_complete, li);
+
+                const span = document.createElement('span');
+                span.className = 'task-text';
+                span.textContent = newTodo.task;
+
+                const deleteBtn = document.createElement('button');
+                deleteBtn.className = 'delete-btn';
+                deleteBtn.innerHTML = '🗑️';
+                deleteBtn.onclick = () => deleteTodo(newTodo.id, li);
+
+                li.appendChild(checkbox);
+                li.appendChild(span);
+                li.appendChild(deleteBtn);
+
+                todoList.insertBefore(li, todoList.firstChild);
+            }
+        }
+    }
+
+    // 4. تغییر وضعیت (انجام شده/نشده)
+    async function toggleTodo(id, newStatus, liElement) {
+        // آپدیت UI قبل از سرور (Optimistic UI)
+        const checkbox = liElement.querySelector('.checkbox');
+        const textSpan = liElement.querySelector('.task-text');
+
+        if (newStatus) {
+            checkbox.classList.add('checked');
+            textSpan.classList.add('completed');
+        } else {
+            checkbox.classList.remove('checked');
+            textSpan.classList.remove('completed');
+        }
+
+        const { error } = await supabase
+            .from('todos')
+            .update({ is_complete: newStatus })
+            .eq('id', id);
+
+        if (error) {
+            console.error('Error toggling todo:', error);
+            // برگرداندن تغییرات در صورت خطا
+            if (newStatus) {
+                checkbox.classList.remove('checked');
+                textSpan.classList.remove('completed');
+            } else {
+                checkbox.classList.add('checked');
+                textSpan.classList.add('completed');
+            }
+            alert('خطا در تغییر وضعیت!');
+        }
+    }
+
+    // 5. حذف کار
+    async function deleteTodo(id, liElement) {
+        if (!confirm('آیا مطمئن هستید؟')) return;
+
+        // حذف موقت از UI
+        liElement.style.display = 'none';
+
+        const { error } = await supabase
+            .from('todos')
+            .delete()
+            .eq('id', id);
+
+        if (error) {
+            console.error('Error deleting todo:', error);
+            liElement.style.display = 'flex'; // برگرداندن
+            alert('خطا در حذف!');
+        } else {
+            liElement.remove();
+            if (todoList.children.length === 0) {
+                emptyState.style.display = 'block';
+            }
+        }
+    }
+
+    // زدن اینتر در اینپوت
+    taskInput.addEventListener('keypress', function (e) {
+        if (e.key === 'Enter') {
+            addTodo();
+        }
+    });
+
+    // شروع برنامه
+    fetchTodos();
+
+</script>
+
+</body>
+</html>
